@@ -1,0 +1,83 @@
+---
+- name: Creazione del server Jitsi
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  user: root
+  tasks:
+    # Lettura delle variabili generali
+    - name: Inclusione delle variabili generali
+      include_vars: vars.yml
+      tags:
+        - always
+    # Lettura delle variabili locali
+    - name: Inclusione delle variabili locali
+      include_vars: "{{ item }}"
+      with_first_found:
+        - files:
+           - local/vars.yml
+          skip: true
+      tags:
+        - always
+    # Lettura dei dati segreti
+    - name: Inclusione dei dati segreti Hetzner
+      include_vars: secrets/hetzner.yml
+      no_log: true
+      tags:
+        - always
+    # Creazione della VM
+    - name: Creazione della VM
+      hcloud_server:
+        name: jitsi-server
+        api_token: "{{ hcloud_token }}"
+        server_type: cx11
+        image: ubuntu-18.04
+        location: "{{ jitsi_location }}"
+        ssh_keys:
+          "{{ jitsi_ssh_keys }}"
+        state: present
+      register: server
+      tags:
+        - create
+    # Distruzione della VM
+    - name: Distruzione della VM
+      hcloud_server:
+        name: jitsi-server
+        api_token: "{{ hcloud_token }}"
+        state: absent
+      tags:
+        - never
+        - destroy
+    # Lettura indirizzo IP
+    - name: Lettura dati del floating ip
+      hcloud_floating_ip_info:
+        api_token: "{{ hcloud_token }}"
+        label_selector: "use=jitsi"
+      register: floating_ip
+      tags:
+        - create
+    - name: output
+      debug:
+        var: floating_ip
+      tags:
+        - create
+      # Assegnazione indirizzo IP
+    - name: Assegnazione floating IP
+      when: floating_ip.hcloud_floating_ip_info[0].server != "jitsi-server"
+      uri:
+        url: "https://api.hetzner.cloud/v1/floating_ips/{{ floating_ip.hcloud_floating_ip_info[0].id }}/actions/assign"
+        method: POST
+        validate_certs: false
+        status_code: 201
+        headers:
+          Authorization: "Bearer {{ hcloud_token }}"
+        body_format: json
+        body:
+          server: "{{ server.hcloud_server.id }}"
+      tags:
+        - create
+    
+
+      
+
+    

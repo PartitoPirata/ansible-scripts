@@ -1,0 +1,9 @@
+# La directory secrets contiene chiavi e token e il suo contenuto, eccetto il
+# README, non va pubblicato.
+/secrets/
+!/secrets/README.md
+
+# La directory local contiene impostazioni locali che non ha senso siano
+# pubblicate, con l'eccezione del README.
+/local/
+!/local/README.md
