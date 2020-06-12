@@ -1,0 +1,4 @@
+auto eth0:1
+iface eth0:1 inet static
+    address {{ floating_ip.hcloud_floating_ip_info[0].ip }}
+    netmask 32

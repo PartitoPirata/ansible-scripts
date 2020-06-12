@@ -1,9 +1,11 @@
+#
+# Script di installazione per il server Jitsi
+#
 ---
-- name: Creazione del server Jitsi
+# Operazioni per la macchina virtuale Jitsi
+- name: Gestione della macchina virtuale Jitsi
   hosts: localhost
-  connection: local
   gather_facts: false
-  user: root
   tasks:
     # Lettura delle variabili generali
     - name: Inclusione delle variabili generali
@@ -26,9 +28,9 @@
       tags:
         - always
     # Creazione della VM
-    - name: Creazione della VM
+    - name: Creazione della VM "{{ jitsi_server }}"
       hcloud_server:
-        name: jitsi-server
+        name: "{{ jitsi_server }}"
         api_token: "{{ hcloud_token }}"
         server_type: cx11
         image: ubuntu-18.04
@@ -40,9 +42,9 @@
       tags:
         - create
     # Distruzione della VM
-    - name: Distruzione della VM
+    - name: Distruzione della VM "{{ jitsi_server }}"
       hcloud_server:
-        name: jitsi-server
+        name: "{{ jitsi_server }}"
         api_token: "{{ hcloud_token }}"
         state: absent
       tags:
@@ -56,14 +58,9 @@
       register: floating_ip
       tags:
         - create
-    - name: output
-      debug:
-        var: floating_ip
-      tags:
-        - create
-      # Assegnazione indirizzo IP
-    - name: Assegnazione floating IP
-      when: floating_ip.hcloud_floating_ip_info[0].server != "jitsi-server"
+    # Assegnazione indirizzo IP
+    - name: Associazione del floating IP su jitsi
+      when: floating_ip.hcloud_floating_ip_info[0].server != "{{ server.hcloud_server.id }}"
       uri:
         url: "https://api.hetzner.cloud/v1/floating_ips/{{ floating_ip.hcloud_floating_ip_info[0].id }}/actions/assign"
         method: POST
@@ -76,6 +73,106 @@
           server: "{{ server.hcloud_server.id }}"
       tags:
         - create
+    - name: "Configurazione provvisoria della rete (indirizzo: {{ floating_ip.hcloud_floating_ip_info[0].ip }})"
+      command: "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=30 -i {{ jitsi_ssh_private_key }} root@{{ server.hcloud_server.ipv4_address }} '(ip addr show eth0 | grep {{ floating_ip.hcloud_floating_ip_info[0].ip }}) || ip addr add {{ floating_ip.hcloud_floating_ip_info[0].ip }} dev eth0'"
+      tags:
+        - create
+
+# Impostazione della configurazione di base
+- name: Configurazione del server
+  hosts: jitsi.marcoconfalonieri.it
+  gather_facts: false
+  vars:
+    floating_ip: "{{ hostvars['localhost']['floating_ip']}}"
+  tags:
+    - create
+  tasks:
+    # Configurazione di rete
+    - name: Salvataggio della configurazione di rete
+      template:
+        src: templates/60-floating-ip.cfg.j2
+        dest: /etc/network/interfaces.d/60-floating-ip.cfg
+    # Update della cache e dei pacchetti
+    - name: Aggiornamento della lista pacchetti e upgrade
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400
+    # Installa aptitude
+    - name: Installazione di aptitude
+      apt:
+        name: aptitude
+        state: present
+    # Installazione nginx
+    - name: Installazione nginx
+      apt:
+        name: nginx
+        state: present
+    # Installazione ufw
+    - name: Installazione ufw
+      apt:
+        name: ufw
+        state: present
+    # Permetti porta ssh
+    - name: Configura accesso ssh
+      ufw:
+        rule: allow
+        port: ssh
+    # Permetti porta 80/tcp
+    - name: Configura accesso http
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+    # Permetti porta 443/tcp
+    - name: Configura accesso https
+      ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+    # Permetti connessioni su porte tcp 10000:60000
+    - name: Configura connessioni porte 10000 -> 60000 (tcp)
+      ufw:
+        rule: allow
+        port: 10000:60000
+        proto: tcp
+    # Permetti connessioni su porte udp 10000:60000
+    - name: Configura connessioni porte 10000 -> 60000 (udp)
+      ufw:
+        rule: allow
+        port: 10000:60000
+        proto: udp
+    # Permetti porta 5222
+    - name: Configura accesso porta 5222
+      ufw:
+        rule: allow
+        port: "5222"
+    # Permetti porta 5347
+    - name: Configura accesso porta 5347
+      ufw:
+        rule: allow
+        port: "5347"
+
+# Operazioni per installare il software
+- name: Gestione del server Jitsi + Jibri
+  hosts: jitsi.marcoconfalonieri.it
+  gather_facts: true
+  tags:
+    - create
+  roles:
+      - { role: systemli.letsencrypt }
+      - { role: systemli.jitsi-meet }
+  vars:
+    jitsi_meet_server_name: "{{ inventory_hostname }}"
+    letsencrypt_cert:
+      name: "{{ inventory_hostname }}"
+      domains:
+        - "{{ inventory_hostname }}"
+      challenge: http
+      http_auth: webroot
+      webroot_path: /var/www/html
+    letsencrypt_opts_extra: --register-unsafely-without-email
+
     
 
       

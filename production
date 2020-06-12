@@ -1,5 +1,3 @@
-[local]
-localhost
-
-[hetzner]
-jitsi.partito-pirata.it
+[targets]
+localhost                   ansible_connection=local    ansible_user=root
+jitsi.marcoconfalonieri.it  ansible_connection=ssh      ansible_user=root   ansible_ssh_common_args='-o StrictHostKeyChecking=no'   
