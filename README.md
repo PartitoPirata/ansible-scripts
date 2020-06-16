@@ -9,6 +9,7 @@ Per poter operare sulle macchine sono necessari i seguenti prerequisiti:
  - Ansible >=2.8
  - `hcloud_python`, installabile con `pip install hcloud`
  - il comando `ssh` deve poter essere eseguito
+ - il ruolo `systemli.letsencrypt` deve essere installato con `ansible-galaxy `
 
 ## Configurazione
 
