@@ -33,7 +33,7 @@
         name: "{{ jitsi_server }}"
         api_token: "{{ hcloud_token }}"
         server_type: cx11
-        image: ubuntu-18.04
+        image: ubuntu-20.04
         location: "{{ jitsi_location }}"
         ssh_keys:
           "{{ jitsi_ssh_keys }}"
@@ -60,7 +60,7 @@
         - create
     # Assegnazione indirizzo IP
     - name: Associazione del floating IP su jitsi
-      when: floating_ip.hcloud_floating_ip_info[0].server != "{{ server.hcloud_server.id }}"
+      when: floating_ip.hcloud_floating_ip_info[0].server != server.hcloud_server.id
       uri:
         url: "https://api.hetzner.cloud/v1/floating_ips/{{ floating_ip.hcloud_floating_ip_info[0].id }}/actions/assign"
         method: POST
@@ -90,14 +90,10 @@
     # Configurazione di rete
     - name: Salvataggio della configurazione di rete
       template:
-        src: templates/60-floating-ip.cfg.j2
-        dest: /etc/network/interfaces.d/60-floating-ip.cfg
-    # Update della cache e dei pacchetti
-    - name: Aggiornamento della lista pacchetti e upgrade
-      apt:
-        upgrade: yes
-        update_cache: yes
-        cache_valid_time: 86400
+        #src: templates/60-floating-ip.cfg.j2
+        #dest: /etc/network/interfaces.d/60-floating-ip.cfg
+        src: templates/90-floating-ip.cfg.j2
+        dest: /etc/netplan/90-floating-ip.cfg
     # Installa aptitude
     - name: Installazione di aptitude
       apt:
@@ -160,8 +156,8 @@
   tags:
     - create
   roles:
-      - { role: systemli.letsencrypt }
-      - { role: systemli.jitsi-meet }
+    - { role: systemli.letsencrypt }
+    - { role: systemli.jitsi_meet }
   vars:
     jitsi_meet_server_name: "{{ inventory_hostname }}"
     letsencrypt_cert:
@@ -172,6 +168,15 @@
       http_auth: webroot
       webroot_path: /var/www/html
     letsencrypt_opts_extra: --register-unsafely-without-email
+  tasks:
+    # Aggiorna configurazione ngnix
+    - name: Aggiornamento configurazione nginx
+      template:
+        #src: templates/60-floating-ip.cfg.j2
+        #dest: /etc/network/interfaces.d/60-floating-ip.cfg
+        src: templates/9host.j2
+        dest: /etc/netplan/90-floating-ip.cfg
+
 
     
 
