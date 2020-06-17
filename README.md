@@ -6,10 +6,16 @@ macchine del Partito Pirata.
 ## Prerequisiti
 
 Per poter operare sulle macchine sono necessari i seguenti prerequisiti:
- - Ansible >=2.8
- - `hcloud_python`, installabile con `pip install hcloud`
- - il comando `ssh` deve poter essere eseguito
- - il ruolo `systemli.letsencrypt` deve essere installato con `ansible-galaxy `
+
+- Ansible >=2.8
+- `hcloud_python`, installabile con `pip install hcloud`
+- il comando `ssh` deve poter essere eseguito
+- i ruoli `systemli.letsencrypt` e `systemli.jitsi_meet` devono essere
+installati con `ansible-galaxy`:
+
+```bash
+ansible-galaxy install systemli.letsencrypt
+```
 
 ## Configurazione
 
@@ -25,28 +31,30 @@ ansible_python_interpreter: /usr/local/bin/python3
 ```
 
 ## Operazioni
- 
+
  Le operazioni sono selezionabili tramite i tag. Questi i tag disponibili:
-  - `create`: creazione della macchina
-  - `destroy`: distruzione della macchina
- 
- In mancanza di un tag esplicito l'operazione eseguita sarà `create`.
 
- ## Playbook disponibili
+- `create`: creazione della macchina
+- `destroy`: distruzione della macchina
 
- Questi sono i playbook disponibili:
- - `jitsi.yml`: host per le videoconferenze Jitsi + Jibri
+In mancanza di un tag esplicito l'operazione eseguita sarà `create`.
 
- ## Esempi
+## Playbook disponibili
 
- Creazione di una macchina:
+Questi sono i playbook disponibili:
 
- ```bash
- ansible-playbook -i production jitsi.yml
- ```
+- `jitsi.yml`: host per le videoconferenze Jitsi + Jibri
 
- Distruzione di una macchina:
- 
- ```bash
- ansible-playbook -i production jitsi.yml --tags destroy
- ```
+## Esempi
+
+Creazione di una macchina:
+
+```bash
+ansible-playbook -i production jitsi.yml
+```
+
+Distruzione di una macchina:
+
+```bash
+ansible-playbook -i production jitsi.yml --tags destroy
+```
