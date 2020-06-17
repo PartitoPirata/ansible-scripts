@@ -24,7 +24,7 @@
     # Lettura dei dati segreti
     - name: Inclusione dei dati segreti Hetzner
       include_vars: secrets/hetzner.yml
-      no_log: true
+      #no_log: true
       tags:
         - always
     # Creazione della VM
@@ -81,7 +81,7 @@
 # Impostazione della configurazione di base
 - name: Configurazione del server
   hosts: jitsi.marcoconfalonieri.it
-  gather_facts: false
+  gather_facts: true
   vars:
     floating_ip: "{{ hostvars['localhost']['floating_ip']}}"
   tags:
@@ -94,6 +94,12 @@
         #dest: /etc/network/interfaces.d/60-floating-ip.cfg
         src: templates/90-floating-ip.cfg.j2
         dest: /etc/netplan/90-floating-ip.cfg
+    # Aggiornamento pacchetti
+    - name: Update apt-get repo and cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
     # Installa aptitude
     - name: Installazione di aptitude
       apt:
@@ -174,8 +180,12 @@
       template:
         #src: templates/60-floating-ip.cfg.j2
         #dest: /etc/network/interfaces.d/60-floating-ip.cfg
-        src: templates/9host.j2
-        dest: /etc/netplan/90-floating-ip.cfg
+        src: templates/nginx-host.conf.j2
+        dest: /etc/nginx/sites-available/jitsi.marcoconfalonieri.it.conf
+    - name: Reload di nginx
+      systemd:
+        name: nginx
+        state: reloaded
 
 
     
